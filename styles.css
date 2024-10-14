@@ -14,7 +14,7 @@ body {
   background-color: #ffffff;
   width: 90vmin;
   max-width: 800px;
-  margin: 50px auto; /* Центрирование контейнера */
+  margin: 50px auto;
   padding: 50px 30px;
   border-radius: 10px;
   box-shadow: 0 25px 50px rgba(7, 20, 35, 0.2);
@@ -91,6 +91,7 @@ input[type="color"]::-moz-color-swatch {
   height: auto;
   overflow-y: auto;
   max-height: 600px;
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .active {
