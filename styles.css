@@ -159,7 +159,7 @@ input[type="color"]::-moz-color-swatch {
 
 .option-button:active,
 .adv-option-button:active {
-  background-color: #d9ff00; /* Цвет фона при нажатии */
+  background-color: #bbbbbb; /* Цвет фона при нажатии */
   transform: scale(1); /* Легкий эффект уменьшения при нажатии */
 }
 
