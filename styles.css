@@ -19,6 +19,69 @@ body {
   border-radius: 10px;
   box-shadow: 0 25px 50px rgba(7, 20, 35, 0.2);
 }
+.tabs {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 10px;
+  overflow-x: auto; /* Добавлено для прокрутки, если вкладок будет много */
+  white-space: nowrap; /* Чтобы вкладки не переносились на следующую строку */
+}
+
+.tab {
+  display: inline-flex; /* Это позволяет вкладкам выстраиваться в одну линию */
+  padding: 10px 15px;
+  margin-right: 10px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  cursor: pointer;
+  align-items: center;
+  width: auto; /* Центровка текста и кнопки "закрыть" по вертикали */
+}
+
+
+.tab-button {
+  display: inline-block; /* Важно для того, чтобы кнопка добавления новой вкладки тоже оставалась в строке */
+  padding: 10px 15px;
+  background-color: #f1f1f1;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-tab {
+  font-size: 14px; /* Увеличиваем размер */
+  padding: 0 15px; /* Добавляем отступы */
+  margin-left: 10px; /* Разделение кнопки от текста вкладки */
+  cursor: pointer;
+  color: #ff4d4d; /* Цвет кнопки – красный для лучшей видимости */
+  background-color: transparent;
+  border: none;
+  border-radius: 20px;
+  transition: background-color 1s ease;
+}
+
+.close-tab:hover {
+  background-color: #ffcccc; /* Фон при наведении для лучшей заметности */
+  color: #ff0000; /* Более насыщенный цвет при наведении */
+  border-radius: 20px;
+}
+
+.text-area {
+  width: 100%; /* Ширина текстового поля по всей ширине контейнера */
+  height: 300px; /* Высота текстового поля */
+  padding: 10px; /* Внутренние отступы */ /* Учитывает padding в общей ширине/высоте */
+  overflow-wrap: break-word; /* Перенос длинных слов */ /* Сохраняет пробелы и переносит строки */
+  overflow: auto;
+  font-family: Arial, Helvetica, sans-serif; /* Показывает прокрутку, если текст выходит за пределы */
+}
+
+.text-area.active {
+  display: flex;
+}
 
 .options {
   display: flex;
@@ -94,6 +157,15 @@ input[type="color"]::-moz-color-swatch {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.active {
-  background-color: #e0e9ff;
+.option-button:active,
+.adv-option-button:active {
+  background-color: #d9ff00; /* Цвет фона при нажатии */
+  transform: scale(1); /* Легкий эффект уменьшения при нажатии */
 }
+
+.tab:active,
+.tab-button:active {
+  background-color: #8f81ce; /* Цвет фона при нажатии */
+  transform: scale(0.95); /* Легкий эффект уменьшения при нажатии */
+}
+

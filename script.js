@@ -1,153 +1,168 @@
 class RichTextEditor {
-  constructor() {
-      this.optionsButtons = document.querySelectorAll(".option-button");
-      this.advancedOptionButtons = document.querySelectorAll(".adv-option-button");
-      this.fontName = document.getElementById("fontName");
-      this.fontSizeRef = document.getElementById("fontSize");
-      this.writingArea = document.getElementById("text-input");
-      this.linkButton = document.getElementById("createLink");
-      this.alignButtons = document.querySelectorAll(".align");
-      this.spacingButtons = document.querySelectorAll(".spacing");
-      this.formatButtons = document.querySelectorAll(".format");
-      this.foreColorInput = document.getElementById("foreColor");
-      this.backColorInput = document.getElementById("backColor");
+    constructor() {
+        this.tabList = document.getElementById('tab-list');
+        this.tabContent = document.getElementById('tab-content');
+        this.newTabButton = document.getElementById('new-tab');
+        this.tabs = [];
+        this.currentTab = null;
 
-      this.fontList = ["Arial", "Verdana", "Times New Roman", "Garamond", "Georgia", "Courier New", "cursive"];
+        // Управление текстом
+        this.optionsButtons = document.querySelectorAll('.option-button');
+        this.advancedOptionButtons = document.querySelectorAll('.adv-option-button');
+        this.fontName = document.getElementById('fontName');
+        this.fontSizeRef = document.getElementById('fontSize');
+        this.foreColorInput = document.getElementById('foreColor');
+        this.backColorInput = document.getElementById('backColor');
+        this.fontList = ['Arial', 'Verdana', 'Times New Roman', 'Garamond', 'Georgia', 'Courier New', 'cursive'];
 
-      // Сохраняем последние использованные стили
-      this.lastFontName = this.fontList[0]; // Шрифт по умолчанию
-      this.lastFontSize = 3; // Размер шрифта по умолчанию
-      this.lastBold = false;
+        // Сохраняем последние использованные стили
+        this.lastFontName = this.fontList[0]; // Шрифт по умолчанию
+        this.lastFontSize = 3; // Размер шрифта по умолчанию
+        this.lastBold = false;
 
-      this.initialize();
-  }
+        this.initialize();
+    }
 
-  initialize() {
-      this.setupFontOptions();
-      this.applyFontStyleToTextArea();
-      this.setupEventListeners();
-      this.highlightButtons();
-  }
+    initialize() {
+        this.setupFontOptions();
+        this.setupEventListeners();
+        this.newTabButton.addEventListener('click', () => this.createNewTab());
+        this.createNewTab(); // Создаем первую вкладку по умолчанию
+    }
 
-  applyFontStyleToTextArea() {
-      this.modifyText("fontName", false, this.fontName.value);
-  }
+    setupFontOptions() {
+        this.fontList.forEach((font) => {
+            const option = document.createElement('option');
+            option.value = font;
+            option.innerHTML = font;
+            this.fontName.appendChild(option);
+        });
 
-  setupFontOptions() {
-      this.fontList.forEach((font) => {
-          const option = document.createElement("option");
-          option.value = font;
-          option.innerHTML = font;
-          this.fontName.appendChild(option);
-      });
+        for (let i = 1; i <= 7; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.innerHTML = i;
+            this.fontSizeRef.appendChild(option);
+        }
 
-      for (let i = 1; i <= 7; i++) {
-          const option = document.createElement("option");
-          option.value = i;
-          option.innerHTML = i;
-          this.fontSizeRef.appendChild(option);
-      }
+        this.fontSizeRef.value = 3;
+    }
 
-      this.fontSizeRef.value = 3;
-  }
+    setupEventListeners() {
+        this.optionsButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                this.modifyText(button.id, false, null);
+            });
+        });
 
-  setupEventListeners() {
-      this.optionsButtons.forEach((button) => {
-          button.addEventListener("click", () => {
-              this.modifyText(button.id, false, null);
-          });
-      });
+        this.advancedOptionButtons.forEach((button) => {
+            if (button.id !== 'foreColor' && button.id !== 'backColor') {
+                button.addEventListener('change', () => {
+                    this.modifyText(button.id, false, button.value);
+                });
+            }
+        });
 
-      this.advancedOptionButtons.forEach((button) => {
-          if (button.id !== "foreColor" && button.id !== "backColor") {
-              button.addEventListener("change", () => {
-                  this.modifyText(button.id, false, button.value);
-              });
-          }
-      });
+        this.foreColorInput.addEventListener('input', () => {
+            this.modifyText('foreColor', false, this.foreColorInput.value);
+        });
 
-      this.foreColorInput.addEventListener("input", () => {
-          this.modifyText("foreColor", false, this.foreColorInput.value);
-      });
+        this.backColorInput.addEventListener('input', () => {
+            this.modifyText('backColor', false, this.backColorInput.value);
+        });
+    }
 
-      this.backColorInput.addEventListener("input", () => {
-          this.modifyText("backColor", false, this.backColorInput.value);
-      });
+    createNewTab() {
+        const tabId = `tab-${this.tabs.length + 1}`;
+        const tabButton = document.createElement('button');
+        tabButton.classList.add('tab');
+        tabButton.textContent = `Tab ${this.tabs.length + 1}`;
+        tabButton.dataset.tabId = tabId;
+        tabButton.addEventListener('click', () => this.switchToTab(tabId));
 
-      this.linkButton.addEventListener("click", () => {
-          const userLink = prompt("Enter a URL");
-          const formattedLink = this.formatLink(userLink);
-          this.modifyText(this.linkButton.id, false, formattedLink);
-      });
+        // Добавление кнопки "Закрыть" для удаления вкладки
+        const closeButton = document.createElement('span');
+        closeButton.textContent = '✖'; // Символ закрытия
+        closeButton.classList.add('close-tab');
+        closeButton.addEventListener('click', (event) => {
+            event.stopPropagation(); // Останавливаем всплытие события
+            this.removeTab(tabId);
+        });
 
-      this.writingArea.addEventListener("input", (event) => {
-          const selection = window.getSelection();
-          if (!selection.isCollapsed) {
-              this.lastFontName = this.fontName.value;
-              this.lastFontSize = this.fontSizeRef.value;
-              this.lastBold = document.queryCommandState("bold");
-          }
+        tabButton.appendChild(closeButton);
+        this.tabList.appendChild(tabButton);
 
-          // Если поле пустое, восстанавливаем последний стиль
-          if (this.writingArea.innerHTML === "") {
-              this.applyLastStyles();
-          } else {
-              // Если есть текст, то применяем шрифт из меню
-              this.modifyText("fontName", false, this.fontName.value);
-          }
+        const textArea = document.createElement('div');
+        textArea.id = tabId;
+        textArea.classList.add('text-area');
+        textArea.contentEditable = 'true';
 
-          this.applyFontSizeToSelection();
-      });
-  }
+        // Добавляем обработчик ввода для обновления стилей
+        textArea.addEventListener('input', (event) => {
+            const selection = window.getSelection();
+            if (!selection.isCollapsed) {
+                this.lastFontName = this.fontName.value;
+                this.lastFontSize = this.fontSizeRef.value;
+                this.lastBold = document.queryCommandState("bold");
+            }
 
-  modifyText(command, defaultUi, value) {
-      document.execCommand(command, defaultUi, value);
-  }
+            // Применяем шрифт из меню перед добавлением нового текста
+            this.modifyText("fontName", false, this.fontName.value);
+            this.applyFontSizeToSelection(textArea);
 
-  formatLink(link) {
-      return /http/i.test(link) ? link : "http://" + link;
-  }
+            // Если поле пустое, восстанавливаем последний стиль
+            if (textArea.innerHTML === "") {
+                this.applyLastStyles(textArea);
+            }
+        });
 
-  highlightButtons() {
-      this.highlightGroup(this.alignButtons, true);
-      this.highlightGroup(this.spacingButtons, true);
-      this.highlightGroup(this.formatButtons, false);
-  }
+        this.tabContent.appendChild(textArea);
+        this.tabs.push({ tabId, tabButton, textArea });
+        this.switchToTab(tabId); // Переключаемся на новую вкладку
+    }
 
-  highlightGroup(buttons, needsRemoval) {
-      buttons.forEach((button) => {
-          button.addEventListener("click", () => {
-              if (needsRemoval) {
-                  const alreadyActive = button.classList.contains("active");
-                  this.removeHighlights(buttons);
-                  if (!alreadyActive) {
-                      button.classList.add("active");
-                  }
-              } else {
-                  button.classList.toggle("active");
-              }
-          });
-      });
-  }
+    switchToTab(tabId) {
+        this.tabs.forEach(tab => {
+            tab.textArea.style.display = (tab.tabId === tabId) ? 'block' : 'none';
+            tab.tabButton.classList.toggle('active', tab.tabId === tabId);
+        });
+        this.currentTab = this.tabs.find(tab => tab.tabId === tabId);
+    }
 
-  removeHighlights(buttons) {
-      buttons.forEach((button) => {
-          button.classList.remove("active");
-      });
-  }
+    removeTab(tabId) {
+        const tabToRemove = this.tabs.find(tab => tab.tabId === tabId);
+        if (tabToRemove) {
+            // Удаляем текстовую область и кнопку вкладки
+            this.tabContent.removeChild(tabToRemove.textArea);
+            this.tabList.removeChild(tabToRemove.tabButton);
+            // Удаляем вкладку из массива
+            this.tabs = this.tabs.filter(tab => tab.tabId !== tabId);
+            // Если текущая вкладка была удалена, переключаемся на другую
+            if (this.currentTab.tabId === tabId && this.tabs.length > 0) {
+                this.switchToTab(this.tabs[0].tabId); // Переключаемся на первую оставшуюся вкладку
+            } else if (this.tabs.length === 0) {
+                this.currentTab = null; // Сбрасываем текущую вкладку
+            }
+        }
+    }
 
-  applyFontSizeToSelection() {
-      const selectedFontSize = this.fontSizeRef.value;
-      document.execCommand("fontSize", false, selectedFontSize);
-  }
+    modifyText(command, defaultUi, value) {
+        document.execCommand(command, defaultUi, value);
+    }
 
-  applyLastStyles() {
-      this.modifyText("fontName", false, this.lastFontName || "Arial");
-      this.modifyText("fontSize", false, this.lastFontSize || 3);
-      if (this.lastBold) {
-          this.modifyText("bold", false, null);
-      }
-  }
+    applyFontSizeToSelection(textArea) {
+        const selectedFontSize = this.fontSizeRef.value;
+        textArea.focus(); // Убедимся, что текстовое поле в фокусе перед выполнением команды
+        document.execCommand("fontSize", false, selectedFontSize);
+    }
+
+    applyLastStyles(textArea) {
+        this.modifyText("fontName", false, this.lastFontName || "Arial");
+        this.modifyText("fontSize", false, this.lastFontSize || 3);
+        if (this.lastBold) {
+            this.modifyText("bold", false, null);
+        }
+    }
 }
 
 window.onload = () => new RichTextEditor();

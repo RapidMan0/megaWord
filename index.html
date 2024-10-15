@@ -12,6 +12,17 @@
 </head>
 <body>
     <div class="container">
+        <div class="tabs">
+            <div id="tab-list">
+                <!-- Вкладки будут добавляться динамически -->
+            </div>
+            <button id="new-tab" class="tab-button">+</button>
+        </div>
+
+        <div id="tab-content" class="tab-contents">
+            <!-- Контент вкладок будет добавляться динамически -->
+        </div>
+
         <div class="options">
             <!-- Text Format -->
             <button id="bold" class="option-button format">
@@ -79,7 +90,6 @@
                 <label for="backColor">Highlight Color</label>
             </div>
         </div>
-        <div id="text-input" contenteditable="true"></div>
     </div>
     <!--Script-->
     <script src="script.js"></script>
