@@ -25,23 +25,22 @@ body {
   justify-content: flex-start;
   align-items: center;
   margin-bottom: 10px;
-  overflow-x: auto; /* Добавлено для прокрутки, если вкладок будет много */
-  white-space: nowrap; /* Чтобы вкладки не переносились на следующую строку */
+  overflow-x: auto; /* Прокрутка при большом количестве вкладок */
+  white-space: nowrap;
 }
 
 .tab {
-  display: inline-flex; /* Это позволяет вкладкам выстраиваться в одну линию */
+  display: inline-flex;
   padding: 10px 15px;
   margin-right: 10px;
   background-color: #f1f1f1;
   border-radius: 5px;
   cursor: pointer;
   align-items: center;
-  width: auto; /* Центровка текста и кнопки "закрыть" по вертикали */
+  width: auto;
 }
 
 .tab-button {
-  display: inline-block; /* Важно для того, чтобы кнопка добавления новой вкладки тоже оставалась в строке */
   padding: 10px 15px;
   background-color: #f1f1f1;
   border: none;
@@ -53,11 +52,11 @@ body {
 }
 
 .close-tab {
-  font-size: 18px; /* Увеличиваем размер */
-  padding: 0 15px; /* Добавляем отступы */
-  margin-left: 10px; /* Разделение кнопки от текста вкладки */
+  font-size: 18px;
+  padding: 0 15px;
+  margin-left: 10px;
   cursor: pointer;
-  color: #ff4d4d; /* Цвет кнопки – красный для лучшей видимости */
+  color: #ff4d4d;
   background-color: transparent;
   border: none;
   border-radius: 20px;
@@ -65,18 +64,18 @@ body {
 }
 
 .close-tab:hover {
-  background-color: #ffcccc; /* Фон при наведении для лучшей заметности */
-  color: #ff0000; /* Более насыщенный цвет при наведении */
+  background-color: #ffcccc;
+  color: #ff0000;
   border-radius: 20px;
 }
 
 .text-area {
-  width: 100%; /* Ширина текстового поля по всей ширине контейнера */
-  height: 300px; /* Высота текстового поля */
-  padding: 10px; /* Внутренние отступы */ /* Учитывает padding в общей ширине/высоте */
-  overflow-wrap: break-word; /* Перенос длинных слов */ /* Сохраняет пробелы и переносит строки */
+  width: 100%;
+  height: 300px;
+  padding: 10px;
+  overflow-wrap: break-word;
   overflow: auto;
-  font-family: Arial, Helvetica, sans-serif; /* Показывает прокрутку, если текст выходит за пределы */
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 .text-area.active {
@@ -96,9 +95,10 @@ body {
   z-index: 1000;
 }
 
-/* Добавляем приоритет для шрифта и цветов */
-#fontName, #fontSize, .input-wrapper {
-  order: -1; /* Двигаем элементы в начало */
+#fontName,
+#fontSize,
+.input-wrapper {
+  order: -1;
 }
 
 button {
@@ -164,13 +164,28 @@ input[type="color"]::-moz-color-swatch {
 
 .option-button:active,
 .adv-option-button:active {
-  background-color: #bbbbbb; /* Цвет фона при нажатии */
-  transform: scale(1); /* Легкий эффект уменьшения при нажатии */
+  background-color: #bbbbbb;
+  transform: scale(1);
 }
 
 .tab:active,
 .tab-button:active {
-  background-color: #8f81ce; /* Цвет фона при нажатии */
-  transform: scale(0.95); /* Легкий эффект уменьшения при нажатии */
+  background-color: #8f81ce;
+  transform: scale(0.95);
 }
 
+/* Стиль для кнопки скачивания */
+#download-docx {
+  background-color: #4caf50;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  width: auto;
+}
+
+#download-docx:hover {
+  background-color: #45a049;
+}
