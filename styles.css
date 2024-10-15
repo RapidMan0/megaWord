@@ -53,7 +53,7 @@ body {
 }
 
 .close-tab {
-  font-size: 14px; /* Увеличиваем размер */
+  font-size: 18px; /* Увеличиваем размер */
   padding: 0 15px; /* Добавляем отступы */
   margin-left: 10px; /* Разделение кнопки от текста вкладки */
   cursor: pointer;
