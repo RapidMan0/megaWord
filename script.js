@@ -138,7 +138,7 @@ class RichTextEditor {
             // Удаляем вкладку из массива
             this.tabs = this.tabs.filter(tab => tab.tabId !== tabId);
             // Если текущая вкладка была удалена, переключаемся на другую
-            if (this.currentTab.tabId === tabId && this.tabs.length > 0) {
+            if (this.currentTab && this.currentTab.tabId === tabId && this.tabs.length > 0) {
                 this.switchToTab(this.tabs[0].tabId); // Переключаемся на первую оставшуюся вкладку
             } else if (this.tabs.length === 0) {
                 this.currentTab = null; // Сбрасываем текущую вкладку
@@ -157,8 +157,12 @@ class RichTextEditor {
     }
 
     applyLastStyles(textArea) {
-        this.modifyText("fontName", false, this.lastFontName || "Arial");
-        this.modifyText("fontSize", false, this.lastFontSize || 3);
+        if (this.lastFontName) {
+            this.modifyText("fontName", false, this.lastFontName);
+        }
+        if (this.lastFontSize) {
+            this.modifyText("fontSize", false, this.lastFontSize);
+        }
         if (this.lastBold) {
             this.modifyText("bold", false, null);
         }
