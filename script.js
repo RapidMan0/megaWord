@@ -28,6 +28,7 @@ class RichTextEditor {
     this.lastFontName = this.fontList[0]; // Шрифт по умолчанию
     this.lastFontSize = 3; // Размер шрифта по умолчанию
     this.lastBold = false;
+    this.isModifying = false; // Флаг для предотвращения рекурсивного вызова
 
     this.initialize();
   }
@@ -84,11 +85,17 @@ class RichTextEditor {
     });
 
     this.foreColorInput.addEventListener("input", () => {
-      this.modifyText("foreColor", false, this.foreColorInput.value);
+      if (!this.isModifying) {
+        // Проверяем флаг
+        this.modifyText("foreColor", false, this.foreColorInput.value);
+      }
     });
 
     this.backColorInput.addEventListener("input", () => {
-      this.modifyText("backColor", false, this.backColorInput.value);
+      if (!this.isModifying) {
+        // Проверяем флаг
+        this.modifyText("backColor", false, this.backColorInput.value);
+      }
     });
   }
 
@@ -170,20 +177,27 @@ class RichTextEditor {
   }
 
   applyLastStyles(textArea) {
-    document.execCommand("fontName", false, this.lastFontName);
-    document.execCommand("fontSize", false, this.lastFontSize);
+    this.modifyText("fontName", false, this.lastFontName);
+    this.modifyText("fontSize", false, this.lastFontSize);
     if (this.lastBold) {
-      document.execCommand("bold", false, null);
+      this.modifyText("bold", false, null);
     }
   }
 
   applyFontSizeToSelection(textArea) {
     const fontSize = this.fontSizeRef.value;
-    document.execCommand("fontSize", false, fontSize);
+    this.modifyText("fontSize", false, fontSize);
   }
 
   modifyText(command, arg, value) {
-    document.execCommand(command, arg, value);
+    if (this.isModifying) return; // Проверяем флаг
+    this.isModifying = true; // Устанавливаем флаг
+
+    try {
+      document.execCommand(command, arg, value);
+    } finally {
+      this.isModifying = false; // Сбрасываем флаг
+    }
   }
 
   updateButtonStates() {
@@ -212,17 +226,16 @@ class RichTextEditor {
   }
 
   fncDoc() {
-    // Реализация метода для скачивания документа в формате DOCX
-    const text = this.currentTab.textArea.innerHTML; // Получаем текст из активной вкладки
-    const blob = new Blob([text], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "document.docx"; // Имя файла при скачивании
-    a.click();
-    URL.revokeObjectURL(url); // Удаляем объект после скачивания
+    if (this.currentTab) {
+      const text = this.currentTab.textArea.innerText; // Получаем текст из активной вкладки
+      const blob = new Blob([text], { type: "application/msword" });
+      const link = document.createElement("a");
+
+      link.href = URL.createObjectURL(blob);
+      link.download = "document.doc"; // Имя скачиваемого файла
+      link.click();
+      URL.revokeObjectURL(link.href);
+    }
   }
 }
 
