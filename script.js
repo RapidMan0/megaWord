@@ -210,21 +210,43 @@ class RichTextEditor {
   }
 
   openFile() {
-    const input = document.querySelector(".fileInput"); // Находим поле ввода файла
-    input.click(); // Открываем диалог выбора файла
+    const input = document.querySelector(".fileInput");
+    input.accept = ".txt,.doc,.docx"; // Разрешаем выбор файлов форматов txt, doc и docx
+    input.click();
 
-    // Обрабатываем выбор файла
     input.addEventListener("change", (event) => {
-      const file = event.target.files[0]; // Получаем выбранный файл
-      if (file) {
-        const reader = new FileReader(); // Создаем FileReader для чтения файла
-        reader.readAsText(file); // Читаем файл как текст
-        reader.onload = () => {
-          this.currentTab.textArea.innerText = reader.result; // Загружаем текст в активную вкладку
-        };
-      }
+        const file = event.target.files[0];
+        if (file) {
+            const fileType = file.name.split('.').pop(); // Получаем расширение файла
+
+            if (fileType === 'txt') {
+                // Обработка текстового файла
+                const reader = new FileReader();
+                reader.readAsText(file);
+                reader.onload = () => {
+                    this.currentTab.textArea.innerText = reader.result;
+                };
+            } else if (fileType === 'doc' || fileType === 'docx') {
+                // Обработка файла DOC/DOCX с использованием Mammoth.js
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const arrayBuffer = reader.result;
+                    mammoth.convertToHtml({ arrayBuffer: arrayBuffer })
+                        .then((result) => {
+                            this.currentTab.textArea.innerHTML = result.value; // Вставляем HTML в текстовое поле
+                        })
+                        .catch((error) => {
+                            console.error("Ошибка при чтении файла DOC/DOCX:", error);
+                        });
+                };
+                reader.readAsArrayBuffer(file); // Читаем файл как ArrayBuffer для Mammoth.js
+            } else {
+                alert("Неподдерживаемый формат файла. Пожалуйста, выберите .txt, .doc или .docx файл.");
+            }
+        }
     });
-  }
+}
+
 
   fncDoc() {
     if (this.currentTab) {
