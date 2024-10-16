@@ -41,6 +41,10 @@ class RichTextEditor {
     const downloadButton = document.getElementById("download-doc");
     downloadButton.addEventListener("click", () => this.fncDoc());
 
+    // Добавляем обработчик для открытия файла
+    const openFileButton = document.getElementById("open-file-button");
+    openFileButton.addEventListener("click", () => this.openFile());
+
     this.createNewTab(); // Создаем первую вкладку по умолчанию
   }
 
@@ -145,73 +149,84 @@ class RichTextEditor {
       tab.textArea.style.display = tab.tabId === tabId ? "block" : "none";
       tab.tabButton.classList.toggle("active", tab.tabId === tabId);
     });
-    this.currentTab = this.tabs.find((tab) => tab.tabId === tabId);
 
-    // Обновляем состояния кнопок при переключении вкладки
-    this.updateButtonStates();
+    this.currentTab = this.tabs.find((tab) => tab.tabId === tabId);
+    this.applyLastStyles(this.currentTab.textArea);
   }
 
   removeTab(tabId) {
-    const tabToRemove = this.tabs.find((tab) => tab.tabId === tabId);
-    if (tabToRemove) {
-      // Удаляем текстовую область и кнопку вкладки
-      this.tabContent.removeChild(tabToRemove.textArea);
-      this.tabList.removeChild(tabToRemove.tabButton);
-      // Удаляем вкладку из массива
-      this.tabs = this.tabs.filter((tab) => tab.tabId !== tabId);
-      // Если текущая вкладка была удалена, переключаемся на другую
-      if (
-        this.currentTab &&
-        this.currentTab.tabId === tabId &&
-        this.tabs.length > 0
-      ) {
-        this.switchToTab(this.tabs[0].tabId); // Переключаемся на первую оставшуюся вкладку
-      } else if (this.tabs.length === 0) {
-        this.currentTab = null; // Сбрасываем текущую вкладку
+    const index = this.tabs.findIndex((tab) => tab.tabId === tabId);
+    if (index !== -1) {
+      const tabToRemove = this.tabs[index];
+      tabToRemove.tabButton.remove();
+      tabToRemove.textArea.remove();
+      this.tabs.splice(index, 1);
+      if (this.tabs.length > 0) {
+        this.switchToTab(this.tabs[0].tabId);
+      } else {
+        this.currentTab = null;
       }
     }
   }
 
-  modifyText(command, defaultUi, value) {
-    document.execCommand(command, defaultUi, value);
+  applyLastStyles(textArea) {
+    document.execCommand("fontName", false, this.lastFontName);
+    document.execCommand("fontSize", false, this.lastFontSize);
+    if (this.lastBold) {
+      document.execCommand("bold", false, null);
+    }
   }
 
   applyFontSizeToSelection(textArea) {
-    const selectedFontSize = this.fontSizeRef.value;
-    textArea.focus(); // Убедимся, что текстовое поле в фокусе перед выполнением команды
-    document.execCommand("fontSize", false, selectedFontSize);
+    const fontSize = this.fontSizeRef.value;
+    document.execCommand("fontSize", false, fontSize);
   }
 
-  applyLastStyles(textArea) {
-    if (this.lastFontName) {
-      this.modifyText("fontName", false, this.lastFontName);
-    }
-    if (this.lastFontSize) {
-      this.modifyText("fontSize", false, this.lastFontSize);
-    }
-    if (this.lastBold) {
-      this.modifyText("bold", false, null);
-    }
+  modifyText(command, arg, value) {
+    document.execCommand(command, arg, value);
   }
 
   updateButtonStates() {
     this.optionsButtons.forEach((button) => {
-      button.classList.toggle("active", document.queryCommandState(button.id));
+      if (button.id === "bold") {
+        button.classList.toggle("active", document.queryCommandState("bold"));
+      }
+      // Обновите другие кнопки, если необходимо
+    });
+  }
+
+  openFile() {
+    const input = document.querySelector(".fileInput"); // Изменено на класс .fileInput
+    input.click();
+
+    input.addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.readAsText(file);
+        reader.onload = () => {
+          this.currentTab.textArea.innerText = reader.result; // Загружаем текст в активную вкладку
+        };
+      }
     });
   }
 
   fncDoc() {
-    if (this.currentTab) {
-      const text = this.currentTab.textArea.innerText; // Получаем текст из активной вкладки
-      const blob = new Blob([text], { type: "application/msword" });
-      const link = document.createElement("a");
-
-      link.href = URL.createObjectURL(blob);
-      link.download = "document.doc"; // Имя скачиваемого файла
-      link.click();
-      URL.revokeObjectURL(link.href);
-    }
+    // Реализация метода для скачивания документа в формате DOCX
+    const text = this.currentTab.textArea.innerHTML; // Получаем текст из активной вкладки
+    const blob = new Blob([text], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "document.docx"; // Имя файла при скачивании
+    a.click();
+    URL.revokeObjectURL(url); // Удаляем объект после скачивания
   }
 }
 
-window.onload = () => new RichTextEditor();
+// Инициализация редактора
+document.addEventListener("DOMContentLoaded", () => {
+  new RichTextEditor();
+});

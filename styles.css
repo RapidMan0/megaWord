@@ -195,3 +195,24 @@ input[type="color"]::-moz-color-swatch {
 #download-doc:hover {
   background-color: #455da0;
 }
+
+#open-file-button {
+  background-color: #4c98af;
+  color: white;
+  padding-top: 20px;
+  padding-bottom: 20px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  width: auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#open-file-button:hover {
+  background-color: #455da0;
+}
