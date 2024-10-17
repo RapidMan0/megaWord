@@ -216,3 +216,11 @@ input[type="color"]::-moz-color-swatch {
 #open-file-button:hover {
   background-color: #455da0;
 }
+
+#clear-highlight {
+  width: auto;
+}
+
+mark {
+  background-color: yellow; /* Цвет фона для выделения */
+}
