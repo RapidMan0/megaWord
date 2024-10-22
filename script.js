@@ -397,11 +397,11 @@ class RichTextEditor {
                     const bgColor = node.style.backgroundColor;
                     const textColor = node.style.color;
                     if (bgColor) {
-                        const bgColorIndex = addColorToTable(bgColor);
+                        const bgColorIndex = addColorToTable(rgbToHex(bgColor));
                         rtf += `\\highlight${bgColorIndex} `; // Устанавливаем цвет фона
                     }
                     if (textColor) {
-                        const textColorIndex = addColorToTable(textColor);
+                        const textColorIndex = addColorToTable(rgbToHex(textColor));
                         rtf += `\\cf${textColorIndex} `; // Устанавливаем цвет текста
                     }
                     processChildren(node);
@@ -418,6 +418,12 @@ class RichTextEditor {
         Array.from(parentNode.childNodes).forEach((child) => processNode(child));
     };
 
+    // Преобразование цвета RGB в HEX
+    const rgbToHex = (rgb) => {
+        const result = rgb.match(/\d+/g);
+        return result ? `#${result.map(x => (+x).toString(16).padStart(2, '0')).join('')}` : '';
+    };
+
     // Запуск обработки элементов
     processChildren(tempDiv);
 
@@ -432,18 +438,15 @@ class RichTextEditor {
     return rtf;
 }
 
-
-
-  
-  // Пример функции для преобразования HEX цвета в формат RTF
-  colorToRtf(hex) {
+// Пример функции для преобразования HEX цвета в формат RTF
+colorToRtf(hex) {
     const r = parseInt(hex.substring(1, 3), 16);
     const g = parseInt(hex.substring(3, 5), 16);
     const b = parseInt(hex.substring(5, 7), 16);
     return `\\red${r}\\green${g}\\blue${b};`;
-  }
-  
-  fncDoc() {
+}
+
+fncDoc() {
     if (this.currentTab) {
         const content = this.currentTab.textArea.innerHTML; // Получаем HTML содержимое текстового поля
         const rtfContent = this.htmlToRtf(content); // Преобразуем HTML в RTF
@@ -456,7 +459,8 @@ class RichTextEditor {
         link.click(); // Программно вызываем клик по ссылке
         URL.revokeObjectURL(link.href); // Освобождаем ресурсы после скачивания
     }
-  }
+}
+
 }
 
 // Инициализация редактора
