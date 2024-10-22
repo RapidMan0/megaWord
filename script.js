@@ -70,11 +70,9 @@ class RichTextEditor {
     this.createNewTab();
   }
 
-  // Метод для поиска текста (с возможностью его выделения)
   searchText() {
     const searchText = prompt("Введите текст для поиска:");
     if (!searchText) return;
-
     this.clearHighlightText(this.currentTab.textArea); // Убираем предыдущие выделения, если они есть
     this.highlightText(this.currentTab.textArea, searchText); // Выделяем новый текст
   }
@@ -94,59 +92,37 @@ class RichTextEditor {
     const searchText = prompt("Введите текст для поиска:");
     const replaceText = prompt("Введите текст для замены:");
     if (!searchText || !replaceText) return;
-
     this.clearHighlightText(this.currentTab.textArea); // Убираем выделение перед заменой
     this.replaceTextInNode(this.currentTab.textArea, searchText, replaceText); // Заменяем текст
   }
 
   highlightText(element, searchText) {
-    // Создаем регулярное выражение для поиска
-    const regex = new RegExp(`(${searchText})`, "gi");
-    const walk = document.createTreeWalker(
-        element,
-        NodeFilter.SHOW_TEXT,
-        null,
-        false
-    );
+    const regex = new RegExp(searchText, "gi");
+    const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+    const textNodes = [];
     let node;
 
     while ((node = walk.nextNode())) {
-        const matches = node.nodeValue.match(regex);
-        if (matches) {
-            const parent = node.parentNode;
-            const fragment = document.createDocumentFragment();
-            let lastIndex = 0;
-
-            matches.forEach((match) => {
-                const index = node.nodeValue.indexOf(match, lastIndex);
-                if (index > lastIndex) {
-                    // Добавляем текст до найденного совпадения
-                    fragment.appendChild(
-                        document.createTextNode(
-                            node.nodeValue.substring(lastIndex, index)
-                        )
-                    );
-                }
-
-                const mark = document.createElement("mark");
-                mark.textContent = match; // Оборачиваем найденный текст в <mark>
-                fragment.appendChild(mark);
-
-                lastIndex = index + match.length; // Обновляем индекс для следующего поиска
-            });
-
-            // Добавляем оставшийся текст после последнего совпадения
-            if (lastIndex < node.nodeValue.length) {
-                fragment.appendChild(
-                    document.createTextNode(node.nodeValue.substring(lastIndex))
-                );
-            }
-
-            parent.replaceChild(fragment, node); // Заменяем оригинальный текстовый узел на фрагмент
-        }
+      textNodes.push(node);
     }
-}
 
+    textNodes.forEach((textNode) => {
+      const matches = textNode.nodeValue.match(regex);
+      if (matches) {
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        textNode.nodeValue.replace(regex, (match, offset) => {
+          fragment.appendChild(document.createTextNode(textNode.nodeValue.slice(lastIndex, offset)));
+          const mark = document.createElement("mark");
+          mark.textContent = match;
+          fragment.appendChild(mark);
+          lastIndex = offset + match.length;
+        });
+        fragment.appendChild(document.createTextNode(textNode.nodeValue.slice(lastIndex)));
+        textNode.parentNode.replaceChild(fragment, textNode);
+      }
+    });
+  }
 
   // Функция для замены текста в узлах
   replaceTextInNode(element, searchText, replaceText) {
@@ -157,7 +133,6 @@ class RichTextEditor {
       false
     );
     let node;
-
     while ((node = walk.nextNode())) {
       const regex = new RegExp(`(${searchText})`, "gi");
       node.nodeValue = node.nodeValue.replace(regex, replaceText);
@@ -254,7 +229,11 @@ class RichTextEditor {
     });
 
     this.tabContent.appendChild(textArea);
-    this.tabs.push({ tabId, tabButton, textArea });
+    this.tabs.push({
+      tabId,
+      tabButton,
+      textArea
+    });
     this.switchToTab(tabId);
   }
 
@@ -338,7 +317,9 @@ class RichTextEditor {
           reader.onload = (e) => {
             const arrayBuffer = reader.result;
             mammoth
-              .convertToHtml({ arrayBuffer: arrayBuffer })
+              .convertToHtml({
+                arrayBuffer: arrayBuffer
+              })
               .then((result) => {
                 this.currentTab.textArea.innerHTML = result.value; // Вставляем HTML в текстовое поле
               })
@@ -355,18 +336,130 @@ class RichTextEditor {
       }
     });
   }
+  
+  htmlToRtf(html) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
 
+    let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}';
+    let textColor = 0; // По умолчанию, цвет текста (черный)
+    let bgColor = 0; // По умолчанию, цвет фона (прозрачный)
+
+    // Функция для обработки цвета
+    const colorToRtf = (hex) => {
+        const r = parseInt(hex.substring(1, 3), 16);
+        const g = parseInt(hex.substring(3, 5), 16);
+        const b = parseInt(hex.substring(5, 7), 16);
+        return { r, g, b };
+    };
+
+    // Проходим по всем элементам, чтобы собрать текст и применить стили
+    const processNode = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            rtf += `\\cf${textColor} ${node.nodeValue}`; // Добавляем текст с цветом
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+            switch (node.tagName.toLowerCase()) {
+                case 'b':
+                    rtf += '\\b '; // Жирный шрифт
+                    processChildren(node);
+                    rtf += '\\b0 '; // Завершаем жирный шрифт
+                    break;
+                case 'i':
+                    rtf += '\\i '; // Курсив
+                    processChildren(node);
+                    rtf += '\\i0 '; // Завершаем курсив
+                    break;
+                case 'u':
+                    rtf += '\\ul '; // Подчеркивание
+                    processChildren(node);
+                    rtf += '\\ulnone '; // Завершаем подчеркивание
+                    break;
+                case 'font':
+                    const fontColor = node.getAttribute('color');
+                    if (fontColor) {
+                        const rgb = colorToRtf(fontColor);
+                        textColor = `\\red${rgb.r}\\green${rgb.g}\\blue${rgb.b};`;
+                        rtf += `\\cf${textColor}`; // Устанавливаем цвет текста
+                    }
+                    processChildren(node);
+                    break;
+                case 'span':
+                    const bgColorStyle = node.style.backgroundColor;
+                    const textColorStyle = node.style.color;
+                    if (bgColorStyle) {
+                        const rgb = colorToRtf(bgColorStyle);
+                        rtf += `\\highlight${rgb.r}\\green${rgb.g}\\blue${rgb.b};`; // Цвет фона
+                    }
+                    if (textColorStyle) {
+                        const rgb = colorToRtf(textColorStyle);
+                        textColor = `\\cf${rgb.r}\\green${rgb.g}\\blue${rgb.b};`; // Цвет текста
+                        rtf += textColor; // Устанавливаем цвет текста
+                    }
+                    processChildren(node);
+                    break;
+                case 'h1':
+                    rtf += '\\fs48 '; // Заголовок 1
+                    processChildren(node);
+                    rtf += '\\par '; // Параграф
+                    break;
+                case 'h2':
+                    rtf += '\\fs36 '; // Заголовок 2
+                    processChildren(node);
+                    rtf += '\\par '; // Параграф
+                    break;
+                case 'h3':
+                    rtf += '\\fs24 '; // Заголовок 3
+                    processChildren(node);
+                    rtf += '\\par '; // Параграф
+                    break;
+                case 'p':
+                    processChildren(node);
+                    rtf += '\\par '; // Параграф
+                    break;
+                case 'br':
+                    rtf += '\\par '; // Перенос строки
+                    break;
+                default:
+                    processChildren(node); // Рекурсивно обрабатываем дочерние элементы
+                    break;
+            }
+        }
+    };
+
+    // Рекурсивно обрабатываем детей узла
+    const processChildren = (parentNode) => {
+        Array.from(parentNode.childNodes).forEach(child => processNode(child));
+    };
+
+    // Запускаем обработку корневого элемента
+    processChildren(tempDiv);
+
+    rtf += '}';
+    return rtf;
+}
+
+
+  
+  // Пример функции для преобразования HEX цвета в формат RTF
+  colorToRtf(hex) {
+    const r = parseInt(hex.substring(1, 3), 16);
+    const g = parseInt(hex.substring(3, 5), 16);
+    const b = parseInt(hex.substring(5, 7), 16);
+    return `\\red${r}\\green${g}\\blue${b};`;
+  }
+  
   fncDoc() {
     if (this.currentTab) {
-      const text = this.currentTab.textArea.innerText; // Получаем текст из текстового поля
-      const blob = new Blob([text], { type: "application/msword" }); // Создаем blob с типом файла
-      const link = document.createElement("a"); // Создаем ссылку для скачивания
+        const content = this.currentTab.textArea.innerHTML; // Получаем HTML содержимое текстового поля
+        const rtfContent = this.htmlToRtf(content); // Преобразуем HTML в RTF
+        const blob = new Blob([rtfContent], { type: "application/rtf" }); // Создаем blob с типом RTF
+        const link = document.createElement("a"); // Создаем ссылку для скачивания
 
-      // Генерируем URL для блоба
-      link.href = URL.createObjectURL(blob);
-      link.download = "file.doc"; // Имя файла для скачивания
-      link.click(); // Программно вызываем клик по ссылке
-      URL.revokeObjectURL(link.href); // Освобождаем ресурсы после скачивания
+        // Генерируем URL для блоба
+        link.href = URL.createObjectURL(blob);
+        link.download = "file.rtf"; // Имя файла для скачивания
+        link.click(); // Программно вызываем клик по ссылке
+        URL.revokeObjectURL(link.href); // Освобождаем ресурсы после скачивания
     }
   }
 }
@@ -375,4 +468,3 @@ class RichTextEditor {
 document.addEventListener("DOMContentLoaded", () => {
   new RichTextEditor(); // Создаем экземпляр редактора, когда страница загружена
 });
-;
