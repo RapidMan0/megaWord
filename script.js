@@ -341,102 +341,97 @@ class RichTextEditor {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
 
-    let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}';
-    let textColor = 0; // По умолчанию, цвет текста (черный)
-    let bgColor = 0; // По умолчанию, цвет фона (прозрачный)
+    // Создаем таблицу цветов
+    let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}\n';
+    let colorTable = '{\\colortbl ;'; // Начинаем таблицу цветов
+    let colors = []; // Массив для хранения цветов
 
     // Функция для обработки цвета
+    const addColorToTable = (hex) => {
+        if (!hex) return '';
+        if (!colors.includes(hex)) {
+            colors.push(hex); // Добавляем новый цвет, если он еще не сохранен
+        }
+        const index = colors.indexOf(hex) + 1; // Индекс цвета в таблице
+        return index; // Возвращаем индекс для использования в тексте
+    };
+
+    // Преобразуем цвет HEX в RTF формат
     const colorToRtf = (hex) => {
         const r = parseInt(hex.substring(1, 3), 16);
         const g = parseInt(hex.substring(3, 5), 16);
         const b = parseInt(hex.substring(5, 7), 16);
-        return { r, g, b };
+        return `\\red${r}\\green${g}\\blue${b};`;
     };
 
-    // Проходим по всем элементам, чтобы собрать текст и применить стили
+    // Обработка узлов
     const processNode = (node) => {
         if (node.nodeType === Node.TEXT_NODE) {
-            rtf += `\\cf${textColor} ${node.nodeValue}`; // Добавляем текст с цветом
+            rtf += node.nodeValue; // Добавляем текст
         } else if (node.nodeType === Node.ELEMENT_NODE) {
             switch (node.tagName.toLowerCase()) {
                 case 'b':
                     rtf += '\\b '; // Жирный шрифт
                     processChildren(node);
-                    rtf += '\\b0 '; // Завершаем жирный шрифт
+                    rtf += '\\b0 '; // Завершение жирного шрифта
                     break;
                 case 'i':
                     rtf += '\\i '; // Курсив
                     processChildren(node);
-                    rtf += '\\i0 '; // Завершаем курсив
+                    rtf += '\\i0 '; // Завершение курсива
                     break;
                 case 'u':
                     rtf += '\\ul '; // Подчеркивание
                     processChildren(node);
-                    rtf += '\\ulnone '; // Завершаем подчеркивание
+                    rtf += '\\ulnone '; // Завершение подчеркивания
                     break;
                 case 'font':
                     const fontColor = node.getAttribute('color');
                     if (fontColor) {
-                        const rgb = colorToRtf(fontColor);
-                        textColor = `\\red${rgb.r}\\green${rgb.g}\\blue${rgb.b};`;
-                        rtf += `\\cf${textColor}`; // Устанавливаем цвет текста
+                        const colorIndex = addColorToTable(fontColor);
+                        rtf += `\\cf${colorIndex} `; // Устанавливаем цвет текста
                     }
                     processChildren(node);
                     break;
                 case 'span':
-                    const bgColorStyle = node.style.backgroundColor;
-                    const textColorStyle = node.style.color;
-                    if (bgColorStyle) {
-                        const rgb = colorToRtf(bgColorStyle);
-                        rtf += `\\highlight${rgb.r}\\green${rgb.g}\\blue${rgb.b};`; // Цвет фона
+                    const bgColor = node.style.backgroundColor;
+                    const textColor = node.style.color;
+                    if (bgColor) {
+                        const bgColorIndex = addColorToTable(bgColor);
+                        rtf += `\\highlight${bgColorIndex} `; // Устанавливаем цвет фона
                     }
-                    if (textColorStyle) {
-                        const rgb = colorToRtf(textColorStyle);
-                        textColor = `\\cf${rgb.r}\\green${rgb.g}\\blue${rgb.b};`; // Цвет текста
-                        rtf += textColor; // Устанавливаем цвет текста
+                    if (textColor) {
+                        const textColorIndex = addColorToTable(textColor);
+                        rtf += `\\cf${textColorIndex} `; // Устанавливаем цвет текста
                     }
                     processChildren(node);
-                    break;
-                case 'h1':
-                    rtf += '\\fs48 '; // Заголовок 1
-                    processChildren(node);
-                    rtf += '\\par '; // Параграф
-                    break;
-                case 'h2':
-                    rtf += '\\fs36 '; // Заголовок 2
-                    processChildren(node);
-                    rtf += '\\par '; // Параграф
-                    break;
-                case 'h3':
-                    rtf += '\\fs24 '; // Заголовок 3
-                    processChildren(node);
-                    rtf += '\\par '; // Параграф
-                    break;
-                case 'p':
-                    processChildren(node);
-                    rtf += '\\par '; // Параграф
-                    break;
-                case 'br':
-                    rtf += '\\par '; // Перенос строки
                     break;
                 default:
-                    processChildren(node); // Рекурсивно обрабатываем дочерние элементы
+                    processChildren(node);
                     break;
             }
         }
     };
 
-    // Рекурсивно обрабатываем детей узла
+    // Рекурсивная функция для обработки всех дочерних элементов
     const processChildren = (parentNode) => {
-        Array.from(parentNode.childNodes).forEach(child => processNode(child));
+        Array.from(parentNode.childNodes).forEach((child) => processNode(child));
     };
 
-    // Запускаем обработку корневого элемента
+    // Запуск обработки элементов
     processChildren(tempDiv);
 
-    rtf += '}';
+    // Завершаем таблицу цветов
+    colors.forEach((color) => {
+        colorTable += colorToRtf(color);
+    });
+    colorTable += '}\n';
+    rtf = rtf.replace('{\\rtf1', `{\\rtf1${colorTable}`); // Добавляем таблицу цветов в начало документа
+    rtf += '}'; // Завершаем RTF документ
+
     return rtf;
 }
+
 
 
   
