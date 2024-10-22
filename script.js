@@ -98,7 +98,12 @@ class RichTextEditor {
 
   highlightText(element, searchText) {
     const regex = new RegExp(searchText, "gi");
-    const walk = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+    const walk = document.createTreeWalker(
+      element,
+      NodeFilter.SHOW_TEXT,
+      null,
+      false
+    );
     const textNodes = [];
     let node;
 
@@ -112,13 +117,17 @@ class RichTextEditor {
         const fragment = document.createDocumentFragment();
         let lastIndex = 0;
         textNode.nodeValue.replace(regex, (match, offset) => {
-          fragment.appendChild(document.createTextNode(textNode.nodeValue.slice(lastIndex, offset)));
+          fragment.appendChild(
+            document.createTextNode(textNode.nodeValue.slice(lastIndex, offset))
+          );
           const mark = document.createElement("mark");
           mark.textContent = match;
           fragment.appendChild(mark);
           lastIndex = offset + match.length;
         });
-        fragment.appendChild(document.createTextNode(textNode.nodeValue.slice(lastIndex)));
+        fragment.appendChild(
+          document.createTextNode(textNode.nodeValue.slice(lastIndex))
+        );
         textNode.parentNode.replaceChild(fragment, textNode);
       }
     });
@@ -232,7 +241,7 @@ class RichTextEditor {
     this.tabs.push({
       tabId,
       tabButton,
-      textArea
+      textArea,
     });
     this.switchToTab(tabId);
   }
@@ -318,7 +327,7 @@ class RichTextEditor {
             const arrayBuffer = reader.result;
             mammoth
               .convertToHtml({
-                arrayBuffer: arrayBuffer
+                arrayBuffer: arrayBuffer,
               })
               .then((result) => {
                 this.currentTab.textArea.innerHTML = result.value; // Вставляем HTML в текстовое поле
@@ -336,131 +345,131 @@ class RichTextEditor {
       }
     });
   }
-  
+
   htmlToRtf(html) {
-    const tempDiv = document.createElement('div');
+    const tempDiv = document.createElement("div");
     tempDiv.innerHTML = html;
 
-    // Создаем таблицу цветов
-    let rtf = '{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}\n';
-    let colorTable = '{\\colortbl ;'; // Начинаем таблицу цветов
-    let colors = []; // Массив для хранения цветов
+    let rtf = "{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}\n";
+    let colorTable = "{\\colortbl ;";
+    let colors = [];
 
-    // Функция для обработки цвета
     const addColorToTable = (hex) => {
-        if (!hex) return '';
-        if (!colors.includes(hex)) {
-            colors.push(hex); // Добавляем новый цвет, если он еще не сохранен
-        }
-        const index = colors.indexOf(hex) + 1; // Индекс цвета в таблице
-        return index; // Возвращаем индекс для использования в тексте
+      if (!hex) return "";
+      if (!colors.includes(hex)) {
+        colors.push(hex);
+      }
+      return colors.indexOf(hex) + 1;
     };
 
-    // Преобразуем цвет HEX в RTF формат
     const colorToRtf = (hex) => {
-        const r = parseInt(hex.substring(1, 3), 16);
-        const g = parseInt(hex.substring(3, 5), 16);
-        const b = parseInt(hex.substring(5, 7), 16);
-        return `\\red${r}\\green${g}\\blue${b};`;
+      const r = parseInt(hex.substring(1, 3), 16);
+      const g = parseInt(hex.substring(3, 5), 16);
+      const b = parseInt(hex.substring(5, 7), 16);
+      return `\\red${r}\\green${g}\\blue${b};`;
     };
 
-    // Обработка узлов
-    const processNode = (node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-            rtf += node.nodeValue; // Добавляем текст
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-            switch (node.tagName.toLowerCase()) {
-                case 'b':
-                    rtf += '\\b '; // Жирный шрифт
-                    processChildren(node);
-                    rtf += '\\b0 '; // Завершение жирного шрифта
-                    break;
-                case 'i':
-                    rtf += '\\i '; // Курсив
-                    processChildren(node);
-                    rtf += '\\i0 '; // Завершение курсива
-                    break;
-                case 'u':
-                    rtf += '\\ul '; // Подчеркивание
-                    processChildren(node);
-                    rtf += '\\ulnone '; // Завершение подчеркивания
-                    break;
-                case 'font':
-                    const fontColor = node.getAttribute('color');
-                    if (fontColor) {
-                        const colorIndex = addColorToTable(fontColor);
-                        rtf += `\\cf${colorIndex} `; // Устанавливаем цвет текста
-                    }
-                    processChildren(node);
-                    break;
-                case 'span':
-                    const bgColor = node.style.backgroundColor;
-                    const textColor = node.style.color;
-                    if (bgColor) {
-                        const bgColorIndex = addColorToTable(rgbToHex(bgColor));
-                        rtf += `\\highlight${bgColorIndex} `; // Устанавливаем цвет фона
-                    }
-                    if (textColor) {
-                        const textColorIndex = addColorToTable(rgbToHex(textColor));
-                        rtf += `\\cf${textColorIndex} `; // Устанавливаем цвет текста
-                    }
-                    processChildren(node);
-                    break;
-                default:
-                    processChildren(node);
-                    break;
-            }
-        }
-    };
-
-    // Рекурсивная функция для обработки всех дочерних элементов
-    const processChildren = (parentNode) => {
-        Array.from(parentNode.childNodes).forEach((child) => processNode(child));
-    };
-
-    // Преобразование цвета RGB в HEX
     const rgbToHex = (rgb) => {
-        const result = rgb.match(/\d+/g);
-        return result ? `#${result.map(x => (+x).toString(16).padStart(2, '0')).join('')}` : '';
+      const result = rgb.match(/\d+/g);
+      return result
+        ? `#${result.map((x) => (+x).toString(16).padStart(2, "0")).join("")}`
+        : "";
     };
 
-    // Запуск обработки элементов
+    const processNode = (node) => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        rtf += node.nodeValue;
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        switch (node.tagName.toLowerCase()) {
+          case "b":
+            rtf += "\\b ";
+            processChildren(node);
+            rtf += "\\b0 ";
+            break;
+          case "i":
+            rtf += "\\i ";
+            processChildren(node);
+            rtf += "\\i0 ";
+            break;
+          case "u":
+            rtf += "\\ul ";
+            processChildren(node);
+            rtf += "\\ulnone ";
+            break;
+          case "font":
+            const fontColor = node.getAttribute("color");
+            if (fontColor) {
+              const colorIndex = addColorToTable(fontColor);
+              rtf += `\\cf${colorIndex} `;
+            }
+            processChildren(node);
+            rtf += "\\cf0 "; // Reset text color after processing
+            break;
+          case "span":
+            const bgColor = node.style.backgroundColor;
+            const textColor = node.style.color;
+            if (bgColor) {
+              const bgColorIndex = addColorToTable(rgbToHex(bgColor));
+              rtf += `\\highlight${bgColorIndex} `;
+            }
+            if (textColor) {
+              const textColorIndex = addColorToTable(rgbToHex(textColor));
+              rtf += `\\cf${textColorIndex} `;
+            }
+            processChildren(node);
+            if (bgColor) {
+              rtf += "\\highlight0 "; // Reset background color after processing
+            }
+            if (textColor) {
+              rtf += "\\cf0 "; // Reset text color after processing
+            }
+            break;
+          default:
+            processChildren(node);
+            break;
+        }
+      }
+    };
+
+    const processChildren = (parentNode) => {
+      Array.from(parentNode.childNodes).forEach((child) => processNode(child));
+    };
+
     processChildren(tempDiv);
 
-    // Завершаем таблицу цветов
     colors.forEach((color) => {
-        colorTable += colorToRtf(color);
+      colorTable += colorToRtf(color);
     });
-    colorTable += '}\n';
-    rtf = rtf.replace('{\\rtf1', `{\\rtf1${colorTable}`); // Добавляем таблицу цветов в начало документа
-    rtf += '}'; // Завершаем RTF документ
+
+    colorTable += "}\n";
+    rtf = rtf.replace("{\\rtf1", `{\\rtf1${colorTable}`);
+    rtf += "}";
 
     return rtf;
-}
+  }
 
-// Пример функции для преобразования HEX цвета в формат RTF
-colorToRtf(hex) {
+  // Пример функции для преобразования HEX цвета в формат RTF
+  colorToRtf(hex) {
     const r = parseInt(hex.substring(1, 3), 16);
     const g = parseInt(hex.substring(3, 5), 16);
     const b = parseInt(hex.substring(5, 7), 16);
     return `\\red${r}\\green${g}\\blue${b};`;
-}
+  }
 
-fncDoc() {
+  fncDoc() {
     if (this.currentTab) {
-        const content = this.currentTab.textArea.innerHTML; // Получаем HTML содержимое текстового поля
-        const rtfContent = this.htmlToRtf(content); // Преобразуем HTML в RTF
-        const blob = new Blob([rtfContent], { type: "application/rtf" }); // Создаем blob с типом RTF
-        const link = document.createElement("a"); // Создаем ссылку для скачивания
+      const content = this.currentTab.textArea.innerHTML; // Получаем HTML содержимое текстового поля
+      const rtfContent = this.htmlToRtf(content); // Преобразуем HTML в RTF
+      const blob = new Blob([rtfContent], { type: "application/rtf" }); // Создаем blob с типом RTF
+      const link = document.createElement("a"); // Создаем ссылку для скачивания
 
-        // Генерируем URL для блоба
-        link.href = URL.createObjectURL(blob);
-        link.download = "file.rtf"; // Имя файла для скачивания
-        link.click(); // Программно вызываем клик по ссылке
-        URL.revokeObjectURL(link.href); // Освобождаем ресурсы после скачивания
+      // Генерируем URL для блоба
+      link.href = URL.createObjectURL(blob);
+      link.download = "file.rtf"; // Имя файла для скачивания
+      link.click(); // Программно вызываем клик по ссылке
+      URL.revokeObjectURL(link.href); // Освобождаем ресурсы после скачивания
     }
-}
-
+  }
 }
 
 // Инициализация редактора
