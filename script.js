@@ -350,7 +350,14 @@ class RichTextEditor {
   }
 
   parseRTF(rtfContent) {
-    // Карта для замены RTF команд на HTML теги
+    // 1. Удаляем таблицы шрифтов, цветовые таблицы и другие метаданные
+    rtfContent = rtfContent
+      .replace(/{\\fonttbl[^}]+}/g, "")   // Удаление таблицы шрифтов
+      .replace(/{\\colortbl[^}]+}/g, "")  // Удаление таблицы цветов
+      .replace(/{\\stylesheet[^}]+}/g, "") // Удаление таблицы стилей
+      .replace(/{\\info[^}]+}/g, "")       // Удаление метаданных документа
+  
+    // 2. Заменяем стили RTF на теги HTML
     const tagMap = {
       "\\b": "<b>", // Жирный шрифт
       "\\b0": "</b>", // Завершение жирного шрифта
@@ -360,40 +367,38 @@ class RichTextEditor {
       "\\ulnone": "</u>", // Завершение подчеркивания
       "\\par": "<br>", // Перевод строки
     };
-
-    // Пример цветовой карты
+  
     const colorMap = {
-      "\\cf1": '<span style="color:red;">', // Пример красного цвета
-      "\\cf2": '<span style="color:green;">', // Пример зеленого цвета
-      "\\cf0": "</span>", // Сброс цвета
+      "\\cf1": '<span style="color:red;">',
+      "\\cf2": '<span style="color:green;">',
+      "\\cf0": "</span>",
     };
-
-    // Заменяем цвета
-    rtfContent = rtfContent.replace(
-      /\\cf\d+/g,
-      (match) => colorMap[match] || ""
-    );
-
-    // Заменяем текстовые стили на основе tagMap
-    rtfContent = rtfContent.replace(
-      /\\[a-z]+\d*/g,
-      (match) => tagMap[match] || ""
-    );
-
-    // Удаляем лишние RTF-команды, которые не обрабатываются
-    rtfContent = rtfContent.replace(/\\[\w]+|{|}/g, "");
-
-    // Заменяем специальные символы RTF на текст
+  
+    // 3. Заменяем цветовые теги
+    rtfContent = rtfContent.replace(/\\cf\d+/g, (match) => colorMap[match] || "");
+  
+    // 4. Заменяем стили RTF на теги HTML
+    rtfContent = rtfContent.replace(/\\[a-z]+\d*/g, (match) => tagMap[match] || "");
+  
+    // 5. Удаляем символы типа \* и прочие нераспознанные команды RTF
     rtfContent = rtfContent
-      .replace(/\\'[0-9a-f]{2}/gi, (match) =>
-        String.fromCharCode(parseInt(match.slice(2), 16))
-      )
-      .replace(/\\n/g, "<br>") // Замена перевода строки на <br>
-      .replace(/\n|\r/g, ""); // Удаление пробелов
-
-    // Возвращаем преобразованный текст
+      .replace(/\\\*/g, "")          // Удаление символов типа \*
+      .replace(/\\[\w]+|{|}/g, "");  // Удаление остальных команд и скобок
+  
+    // 6. Заменяем специальные символы RTF (например, кодировки символов)
+    rtfContent = rtfContent
+      .replace(/\\'[0-9a-f]{2}/gi, (match) => String.fromCharCode(parseInt(match.slice(2), 16)))
+      .replace(/\\n/g, "<br>")  // Замена символа новой строки
+      .replace(/\n|\r/g, "");   // Удаление символов переноса строки
+  
+    // 7. Удаляем лишние пробелы и дублирующиеся пробелы
+    rtfContent = rtfContent.replace(/\s+/g, " ").trim();
+  
     return rtfContent;
   }
+  
+  
+  
 
   htmlToRtf(html) {
     const tempDiv = document.createElement("div");
