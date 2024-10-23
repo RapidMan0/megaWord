@@ -350,57 +350,49 @@ class RichTextEditor {
   }
 
   parseRTF(rtfContent) {
-    let colors = [];
-    let fontTable = [];
-    let colorTableMatch = rtfContent.match(/\\colortbl(.*?);/s);
-    let fontTableMatch = rtfContent.match(/\\f\d+ (.*?)\\/g);
+    // Карта для замены RTF команд на HTML теги
+    const tagMap = {
+      "\\b": "<b>", // Жирный шрифт
+      "\\b0": "</b>", // Завершение жирного шрифта
+      "\\i": "<i>", // Курсив
+      "\\i0": "</i>", // Завершение курсива
+      "\\ul": "<u>", // Подчеркивание
+      "\\ulnone": "</u>", // Завершение подчеркивания
+      "\\par": "<br>", // Перевод строки
+    };
 
-    if (colorTableMatch) {
-      let colorDefinitions = colorTableMatch[1].split(";").filter(Boolean);
-      colorDefinitions.forEach((colorDef) => {
-        let colorMatch = colorDef.match(/\\red(\d+)\\green(\d+)\\blue(\d+)/);
-        if (colorMatch) {
-          let red = colorMatch[1],
-            green = colorMatch[2],
-            blue = colorMatch[3];
-          colors.push(`rgb(${red},${green},${blue})`);
-        }
-      });
-    }
+    // Пример цветовой карты
+    const colorMap = {
+      "\\cf1": '<span style="color:red;">', // Пример красного цвета
+      "\\cf2": '<span style="color:green;">', // Пример зеленого цвета
+      "\\cf0": "</span>", // Сброс цвета
+    };
 
-    if (fontTableMatch) {
-      fontTableMatch.forEach((fontDef) => {
-        let fontMatch = fontDef.match(/\\f(\d+) (.*?)(?=\\)/);
-        if (fontMatch) {
-          let index = fontMatch[1];
-          let fontName = fontMatch[2].replace(/['"]/g, ""); // Удаляем кавычки
-          fontTable[index] = fontName;
-        }
-      });
-    }
+    // Заменяем цвета
+    rtfContent = rtfContent.replace(
+      /\\cf\d+/g,
+      (match) => colorMap[match] || ""
+    );
 
-    rtfContent = rtfContent.replace(/\\colortbl(.*?);/s, "");
-    rtfContent = rtfContent.replace(/\\f(\d+)/g, (match, index) => {
-      let font = fontTable[index] || "inherit";
-      return `<span style="font-family:${font};">`;
-    });
-    rtfContent = rtfContent.replace(/\\cf(\d+)/g, (match, index) => {
-      let color = colors[parseInt(index) - 1] || "inherit";
-      return `<span style="color:${color}">`;
-    });
-    rtfContent = rtfContent.replace(/\\cf0/g, "</span>");
-    rtfContent = rtfContent.replace(/\\par[d]?/g, "<br>");
+    // Заменяем текстовые стили на основе tagMap
+    rtfContent = rtfContent.replace(
+      /\\[a-z]+\d*/g,
+      (match) => tagMap[match] || ""
+    );
 
-    // Обработка текста
-    let plainText = rtfContent
-      .replace(/\\'[0-9a-f]{2}/gi, "")
-      .replace(/\\\*\\[\w]+/g, "")
-      .replace(/\\[\w]+/g, "")
-      .replace(/{|}/g, "")
-      .replace(/\n|\r/g, "")
-      .replace(/\s{2,}/g, " ");
+    // Удаляем лишние RTF-команды, которые не обрабатываются
+    rtfContent = rtfContent.replace(/\\[\w]+|{|}/g, "");
 
-    return plainText.replace(/<\/span><span/g, " ");
+    // Заменяем специальные символы RTF на текст
+    rtfContent = rtfContent
+      .replace(/\\'[0-9a-f]{2}/gi, (match) =>
+        String.fromCharCode(parseInt(match.slice(2), 16))
+      )
+      .replace(/\\n/g, "<br>") // Замена перевода строки на <br>
+      .replace(/\n|\r/g, ""); // Удаление пробелов
+
+    // Возвращаем преобразованный текст
+    return rtfContent;
   }
 
   htmlToRtf(html) {
