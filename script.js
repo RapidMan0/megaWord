@@ -40,13 +40,12 @@ class RichTextEditor {
   initialize() {
     this.setupFontOptions();
     this.setupEventListeners();
-    this.newTabButton.addEventListener("click", () => this.createNewTab());
 
     // Обработчик для кнопки скачивания документа
     const downloadButton = document.getElementById("download-doc");
     downloadButton.addEventListener("click", () => this.fncDoc());
 
-    // Обработчик для открытия файла
+    this.newTabButton.addEventListener("click", () => this.createNewTab());
     const openFileButton = document.getElementById("open-file-button");
     openFileButton.addEventListener("click", () => this.openFile());
 
@@ -305,54 +304,125 @@ class RichTextEditor {
 
   openFile() {
     const input = document.querySelector(".fileInput");
-    input.accept = ".txt,.doc,.docx"; // Разрешаем выбор файлов форматов txt, doc и docx
+    input.accept = ".txt,.doc,.docx,.rtf"; // Add .rtf to the allowed file types
     input.click();
-
     input.addEventListener("change", (event) => {
       const file = event.target.files[0];
       if (file) {
-        const fileType = file.name.split(".").pop(); // Получаем расширение файла
+        const fileType = file.name.split(".").pop(); // Get file extension
+        const reader = new FileReader();
 
         if (fileType === "txt") {
-          // Обработка текстового файла
-          const reader = new FileReader();
+          // Process text file
           reader.readAsText(file);
           reader.onload = () => {
             this.currentTab.textArea.innerText = reader.result;
           };
         } else if (fileType === "doc" || fileType === "docx") {
-          // Обработка файла DOC/DOCX с использованием Mammoth.js
-          const reader = new FileReader();
+          // Process DOC/DOCX file using Mammoth.js
           reader.onload = (e) => {
             const arrayBuffer = reader.result;
             mammoth
-              .convertToHtml({
-                arrayBuffer: arrayBuffer,
-              })
+              .convertToHtml({ arrayBuffer: arrayBuffer })
               .then((result) => {
-                this.currentTab.textArea.innerHTML = result.value; // Вставляем HTML в текстовое поле
+                this.currentTab.textArea.innerHTML = result.value; // Insert HTML into textarea
               })
               .catch((error) => {
-                console.error("Ошибка при чтении файла DOC/DOCX:", error);
+                console.error("Error reading DOC/DOCX file:", error);
               });
           };
-          reader.readAsArrayBuffer(file); // Читаем файл как ArrayBuffer для Mammoth.js
+          reader.readAsArrayBuffer(file); // Read file as ArrayBuffer for Mammoth.js
+        } else if (fileType === "rtf") {
+          // Process RTF file
+          reader.readAsText(file);
+          reader.onload = () => {
+            const rtf = reader.result;
+            const plainText = this.parseRTF(rtf);
+            this.currentTab.textArea.innerHTML = plainText; // Insert parsed HTML into textarea
+          };
         } else {
           alert(
-            "Неподдерживаемый формат файла. Пожалуйста, выберите .txt, .doc или .docx файл."
+            "Unsupported file format. Please select a .txt, .doc, .docx, or .rtf file."
           );
         }
       }
     });
   }
 
+  parseRTF(rtfContent) {
+    let colors = [];
+    let fontTable = [];
+    let colorTableMatch = rtfContent.match(/\\colortbl(.*?);/s);
+    let fontTableMatch = rtfContent.match(/\\f\d+ (.*?)\\/g);
+
+    if (colorTableMatch) {
+      let colorDefinitions = colorTableMatch[1].split(";").filter(Boolean);
+      colorDefinitions.forEach((colorDef) => {
+        let colorMatch = colorDef.match(/\\red(\d+)\\green(\d+)\\blue(\d+)/);
+        if (colorMatch) {
+          let red = colorMatch[1],
+            green = colorMatch[2],
+            blue = colorMatch[3];
+          colors.push(`rgb(${red},${green},${blue})`);
+        }
+      });
+    }
+
+    if (fontTableMatch) {
+      fontTableMatch.forEach((fontDef) => {
+        let fontMatch = fontDef.match(/\\f(\d+) (.*?)(?=\\)/);
+        if (fontMatch) {
+          let index = fontMatch[1];
+          let fontName = fontMatch[2].replace(/['"]/g, ""); // Удаляем кавычки
+          fontTable[index] = fontName;
+        }
+      });
+    }
+
+    rtfContent = rtfContent.replace(/\\colortbl(.*?);/s, "");
+    rtfContent = rtfContent.replace(/\\f(\d+)/g, (match, index) => {
+      let font = fontTable[index] || "inherit";
+      return `<span style="font-family:${font};">`;
+    });
+    rtfContent = rtfContent.replace(/\\cf(\d+)/g, (match, index) => {
+      let color = colors[parseInt(index) - 1] || "inherit";
+      return `<span style="color:${color}">`;
+    });
+    rtfContent = rtfContent.replace(/\\cf0/g, "</span>");
+    rtfContent = rtfContent.replace(/\\par[d]?/g, "<br>");
+
+    // Обработка текста
+    let plainText = rtfContent
+      .replace(/\\'[0-9a-f]{2}/gi, "")
+      .replace(/\\\*\\[\w]+/g, "")
+      .replace(/\\[\w]+/g, "")
+      .replace(/{|}/g, "")
+      .replace(/\n|\r/g, "")
+      .replace(/\s{2,}/g, " ");
+
+    return plainText.replace(/<\/span><span/g, " ");
+  }
+
   htmlToRtf(html) {
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = html;
 
-    let rtf = "{\\rtf1\\ansi\\deff0 {\\fonttbl{\\f0 Arial;}}\n";
+    let rtf = "{\\rtf1\\ansi\\deff0 {\\fonttbl;}\n";
+    let fontTable = "{\\fonttbl";
     let colorTable = "{\\colortbl ;";
+    let sizeTable = "{\\*\\sizetbl ";
     let colors = [];
+    let fonts = [];
+    let sizes = [];
+
+    const addFontToTable = (font) => {
+      if (!font) return "";
+      if (!fonts.includes(font)) {
+        fonts.push(font);
+        fontTable += `{\\f${fonts.length - 1} ${font};}`; // Добавление шрифта
+      }
+      return fonts.indexOf(font);
+    };
 
     const addColorToTable = (hex) => {
       if (!hex) return "";
@@ -362,18 +432,20 @@ class RichTextEditor {
       return colors.indexOf(hex) + 1;
     };
 
+    const addSizeToTable = (size) => {
+      if (!size) return "";
+      if (!sizes.includes(size)) {
+        sizes.push(size);
+        sizeTable += `\\fs${size * 2} `; // Умножаем на 2 для RTF
+      }
+      return sizes.indexOf(size);
+    };
+
     const colorToRtf = (hex) => {
       const r = parseInt(hex.substring(1, 3), 16);
       const g = parseInt(hex.substring(3, 5), 16);
       const b = parseInt(hex.substring(5, 7), 16);
       return `\\red${r}\\green${g}\\blue${b};`;
-    };
-
-    const rgbToHex = (rgb) => {
-      const result = rgb.match(/\d+/g);
-      return result
-        ? `#${result.map((x) => (+x).toString(16).padStart(2, "0")).join("")}`
-        : "";
     };
 
     const processNode = (node) => {
@@ -397,17 +469,28 @@ class RichTextEditor {
             rtf += "\\ulnone ";
             break;
           case "font":
+            const fontFamily = node.getAttribute("face");
+            if (fontFamily) {
+              const fontIndex = addFontToTable(fontFamily);
+              rtf += `\\f${fontIndex} `;
+            }
             const fontColor = node.getAttribute("color");
             if (fontColor) {
               const colorIndex = addColorToTable(fontColor);
               rtf += `\\cf${colorIndex} `;
             }
+            const fontSize = node.getAttribute("size");
+            if (fontSize) {
+              const sizeIndex = addSizeToTable(fontSize);
+              rtf += `\\fs${sizeIndex * 2} `; // RTF требует размер в половинных пунктах
+            }
             processChildren(node);
-            rtf += "\\cf0 "; // Reset text color after processing
+            rtf += "\\f0 \\cf0 \\fs24 "; // Сброс стиля
             break;
           case "span":
             const bgColor = node.style.backgroundColor;
             const textColor = node.style.color;
+            const fontSizeSpan = window.getComputedStyle(node).fontSize;
             if (bgColor) {
               const bgColorIndex = addColorToTable(rgbToHex(bgColor));
               rtf += `\\highlight${bgColorIndex} `;
@@ -416,12 +499,16 @@ class RichTextEditor {
               const textColorIndex = addColorToTable(rgbToHex(textColor));
               rtf += `\\cf${textColorIndex} `;
             }
+            if (fontSizeSpan) {
+              const sizeIndex = addSizeToTable(parseInt(fontSizeSpan));
+              rtf += `\\fs${sizeIndex * 2} `;
+            }
             processChildren(node);
             if (bgColor) {
-              rtf += "\\highlight0 "; // Reset background color after processing
+              rtf += "\\highlight0 "; // Сброс фона
             }
             if (textColor) {
-              rtf += "\\cf0 "; // Reset text color after processing
+              rtf += "\\cf0 "; // Сброс цвета
             }
             break;
           default:
@@ -437,12 +524,18 @@ class RichTextEditor {
 
     processChildren(tempDiv);
 
+    // Завершение таблиц
+    fontTable += "}\n";
+    sizeTable += "}\n";
     colors.forEach((color) => {
       colorTable += colorToRtf(color);
     });
-
     colorTable += "}\n";
-    rtf = rtf.replace("{\\rtf1", `{\\rtf1${colorTable}`);
+
+    rtf = rtf.replace(
+      "{\\rtf1",
+      `{\\rtf1${fontTable}${colorTable}${sizeTable}`
+    );
     rtf += "}";
 
     return rtf;
